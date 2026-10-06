@@ -1,0 +1,116 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int       @id @default(autoincrement())
+  firstName    String    @map("first_name")
+  lastName     String    @map("last_name")
+  email        String    @unique
+  passwordHash String    @map("password_hash")
+  role         String    @default("USER")
+  isActive     Boolean?  @default(true) @map("is_active")
+  lastLogin    DateTime? @map("last_login")
+  createdAt    DateTime? @default(now()) @map("created_at")
+  signature    String?   @db.Text
+
+  requestedRequests PurchaseRequest[] @relation("RequestedByUser")
+  approvedRequests  PurchaseRequest[] @relation("ApprovedByUser")
+
+  @@map("users")
+}
+
+model Company {
+  id        Int       @id @default(autoincrement())
+  name      String
+  address   String?
+  contact   String?
+  telephone String?
+  service   String?
+  logo      String?
+  createdAt DateTime? @default(now()) @map("created_at")
+
+  purchaseRequests PurchaseRequest[]
+
+  @@map("companies")
+}
+
+model Vendor {
+  id            Int       @id @default(autoincrement())
+  name          String
+  address       String?
+  contactPerson String?   @map("contact_person")
+  telephone     String?
+  email         String?
+  sector        String?
+  createdAt     DateTime? @default(now()) @map("created_at")
+
+  purchaseRequests PurchaseRequest[]
+
+  @@map("vendors")
+}
+
+model Article {
+  id          Int       @id @default(autoincrement())
+  name        String
+  description String?
+  unitPrice   Decimal   @default(0) @map("unit_price") @db.Decimal(15, 2)
+  createdAt   DateTime? @default(now()) @map("created_at")
+
+  purchaseRequestItems PurchaseRequestItem[]
+
+  @@map("articles")
+}
+
+model PurchaseRequest {
+  id                Int       @id @default(autoincrement())
+  requestNo         String    @unique @map("request_no")
+  requestDate       DateTime  @map("request_date") @db.Date
+  companyId         Int       @map("company_id")
+  vendorId          Int       @map("vendor_id")
+  quoteNumber       String?   @map("quote_number")
+  paymentTerms      String?   @map("payment_terms")
+  deliveryDate      DateTime? @map("delivery_date") @db.Date
+  sector            String?
+  currency          String?   @default("GNF")
+  subtotal          Decimal   @default(0) @map("subtotal") @db.Decimal(15, 2)
+  tax               Decimal?  @default(0) @map("tax") @db.Decimal(15, 2)
+  labourCost        Decimal?  @default(0) @map("labour_cost") @db.Decimal(15, 2)
+  total             Decimal   @default(0) @map("total") @db.Decimal(15, 2)
+  instructions      String?
+  requestedByUserId Int       @map("requested_by_user_id")
+  approvedByUserId  Int?      @map("approved_by_user_id")
+  status            String?   @default("PENDING")
+  fileUrl           String?   @map("file_url")
+  submittedAt       DateTime? @default(now()) @map("submitted_at")
+  createdAt         DateTime? @default(now()) @map("created_at")
+
+  company     Company               @relation(fields: [companyId], references: [id])
+  vendor      Vendor                @relation(fields: [vendorId], references: [id])
+  requestedBy User                  @relation("RequestedByUser", fields: [requestedByUserId], references: [id])
+  approvedBy  User?                 @relation("ApprovedByUser", fields: [approvedByUserId], references: [id])
+  items       PurchaseRequestItem[]
+
+  @@map("purchase_requests")
+}
+
+model PurchaseRequestItem {
+  id          Int      @id @default(autoincrement())
+  requestId   Int      @map("request_id")
+  articleId   Int?     @map("article_id")
+  articleName String   @map("article_name")
+  description String?
+  quantity    Decimal  @default(1) @map("quantity") @db.Decimal(10, 2)
+  unitPrice   Decimal  @map("unit_price") @db.Decimal(15, 2)
+  total       Decimal  @map("total") @db.Decimal(15, 2)
+
+  request PurchaseRequest @relation(fields: [requestId], references: [id])
+  article Article?        @relation(fields: [articleId], references: [id])
+
+  @@map("purchase_request_items")
+}
