@@ -1,0 +1,36 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - main # Remplacez par 'master' si votre branche principale s'appelle master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Récupération du code
+        uses: actions/checkout@v4
+
+      - name: 🚀 Déploiement sur le serveur Linux
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          # Si vous utilisez un mot de passe à la place d'une clé SSH (moins recommandé), 
+          # commentez la ligne 'key:' et décommentez celle-ci :
+          # password: ${{ secrets.SERVER_PASSWORD }}
+          script: |
+            # ⚠️ IMPORTANT : Remplacez ce chemin par le dossier où se trouve votre projet sur le serveur de production
+            cd /var/www/maersk_backend
+            
+            # On récupère les dernières modifications du repo
+            git pull origin main
+            
+            # On relance docker-compose en reconstruisant le backend
+            docker compose up -d --build
+            
+            # On nettoie les anciennes images non utilisées pour ne pas surcharger le serveur
+            docker image prune -f
